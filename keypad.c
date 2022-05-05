@@ -1,11 +1,11 @@
 #include "keypad.h"
 
-extern volatile uint8_t kbstate;
+volatile uint8_t kbstate;
 
 ISR(PCINT2_vect)
 {
-    kbstate=(~PINC)&0xF0;
-    if(kbstate)beep();
+    kbstate = (~PINC) & 0xF0;
+    if( kbstate ) beep();
 }
 
 void beep()
@@ -19,16 +19,16 @@ uint8_t wait_key()
 {
 	uint8_t input;
 
-    while(!kbstate);
-    input=kbstate;
-    while(kbstate);
+    while( !kbstate );
+    input = kbstate;
+    while( kbstate );
     
-    switch(input)
+    switch( input )
     {
         case K_UP:;
         case K_DN:;
         case K_OK:;
-        case K_ESC:return input;
+        case K_ESC: return input;
         default: return 0;
     }
 }

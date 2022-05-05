@@ -1,16 +1,16 @@
-#include "planter_lcd.h"
+#include "planter.h"
 
-extern volatile uint8_t packer_raw, kbstate;
-extern volatile uint16_t planter_raw;
-extern volatile uint32_t  packer_cnt, planter_cnt;
+volatile uint8_t packer_raw, kbstate;
+volatile uint16_t planter_raw;
+volatile uint32_t  packer_cnt, planter_cnt;
 
 void print_data(uint16_t area, uint16_t speed)
 {
-    lcd_set_cursor(9,1);
-    lcd_put_f(speed);
+    lcd_set_cursor( 9, 1);
+    lcd_put_f( speed );
 
-    lcd_set_cursor(9,2);
-    lcd_put_f(area);
+    lcd_set_cursor( 9, 2);
+    lcd_put_f( area );
 }
 
 void set_back_text()
@@ -42,7 +42,7 @@ void lcd_start()
 
 uint8_t menu( const char* entries[], const uint8_t entries_no )
 {
-    static uint8_t usr_select=1, visible_el=1;
+    uint8_t usr_select = 1, visible_el = 1;
 
     lcd_clear();
 
@@ -60,7 +60,7 @@ uint8_t menu( const char* entries[], const uint8_t entries_no )
         lcd_set_cursor(0, (usr_select!=1 ? 2 : 1) );
         lcd_write(0x7E);
 
-        switch(wait_key())
+        switch( wait_key() )
         {
             case K_DN: usr_select++; break;
             case K_UP: usr_select--; break;
@@ -77,55 +77,49 @@ uint8_t menu( const char* entries[], const uint8_t entries_no )
     return 0;
 }
 
-void run_planter(uint8_t speedcheck)
+
+void run_planter( uint8_t speedcheck )
 {
-    uint8_t exit=0, level_r=0, level_l=0, speed_err=0, warnno=0;
+    uint8_t level_r = 0, level_l = 0, errno = 0, back_set = 0, raw_l = 0, raw_r = 0;
 
-    uint8_t raw_l, raw_r;
-
-    uint8_t calval_ll= eeprom_read_byte(CAL_VAL_LL_ADDR);
-    uint8_t calval_rl= eeprom_read_byte(CAL_VAL_RL_ADDR);
-    uint8_t calval_l_scale= eeprom_read_byte(CAL_VAL_LH_ADDR) - calval_ll;
+    uint8_t calval_ll = eeprom_read_byte(CAL_VAL_LL_ADDR);
+    uint8_t calval_rl = eeprom_read_byte(CAL_VAL_RL_ADDR);
+    uint8_t calval_l_scale = eeprom_read_byte(CAL_VAL_LH_ADDR) - calval_ll;
     uint8_t calval_r_scale = eeprom_read_byte(CAL_VAL_RH_ADDR) - calval_rl;
 
-    uint8_t speed_warn_flag = eeprom_read_byte(WARN_SETTING_ADDR);
+    uint8_t slip_warn_flag = eeprom_read_byte(WARN_SETTING_ADDR);
 
-    while(!exit)
-    {
-        lcd_clear();
-        set_back_text();
+	while(1)
+	{
+		if( !back_set )
+		{
+			lcd_clear();
+			set_back_text();
+			back_set = 1;
+		}
 
-        while(!exit)
-        {
-            speed_err=check_stop() & speedcheck;
-            if(speed_err)
-            {
-                throw_error(speed_err);
-                break;
-            }
+		raw_l = read_adc_8b(0);
+		raw_r = read_adc_8b(1);
 
-            raw_l = read_adc_8b(0);
-            raw_r = read_adc_8b(1);
+		level_l = raw_l < calval_ll ? 0 : ((uint16_t)(raw_l-calval_ll)*20) / calval_l_scale;
+		level_r = raw_r < calval_rl ? 0 : ((uint16_t)(raw_r-calval_rl)*20) / calval_r_scale;
 
-            level_l = raw_l < calval_ll ? 0 : ((uint16_t)(raw_l-calval_ll)*20) / calval_l_scale;
-            level_r = raw_r < calval_rl ? 0 : ((uint16_t)(raw_r-calval_rl)*20) / calval_r_scale;
+		errno = check( speedcheck, slip_warn_flag, level_l, level_r );
 
-            warnno = check_warn(level_l,level_r,speedcheck&&speed_warn_flag);
+		if( errno )
+		{
+			throw_error( errno );
+			back_set = 0;
+		}
+		else
+		{
+			print_data( planter_cnt/PLANTER_A, ( planter_raw==0xFFFF ? 0 : (PLANTER_V/planter_raw) ) );
+			lcd_bar(level_l, 0);
+			lcd_bar(level_r, 3);
+		}
 
-            if(warnno)
-            {
-                throw_warn( warnno, speedcheck);
-                break;
-            }
-
-            print_data( planter_cnt/PLANTER_A, ( planter_raw==0xFFFF ? 0 : (PLANTER_V/planter_raw) ) );
-
-            lcd_bar(level_l, 0);
-            lcd_bar(level_r, 3);
-
-            if(kbstate==K_ESC) exit=1;
-        }
-    }
+		if(kbstate==K_ESC) break;
+	}
 }
 
 void run_harrow()
@@ -159,7 +153,7 @@ void planter_cal()
     	}
     }
 
-    if(beep_cnt > 2)
+    if( beep_cnt > 2)
     {
     	BUZ_ON;
     	lcd_clear();
@@ -229,7 +223,7 @@ void warn_settings()
 
 	while(1)
 	{
-		if(eeprom_read_byte(WARN_SETTING_ADDR)) lcd_mvputs( 0, 1, T_YES);
+		if( eeprom_read_byte(WARN_SETTING_ADDR) ) lcd_mvputs( 0, 1, T_YES);
 		else lcd_mvputs( 0, 1, T_NO);
 
 		switch(wait_key())
@@ -239,13 +233,12 @@ void warn_settings()
 		case K_ESC: return;
 		default: break;
 		}
-
 	}
 }
 
 void analog_cal()
 {
-    uint8_t calval_l=0, calval_r = 0;
+    uint8_t calval_l = 0, calval_r = 0;
 
     lcd_clear();
     lcd_mvputs( 0, 0, T_USER_CLOSE);
@@ -334,4 +327,98 @@ void analog_cal()
 
     _delay_ms(1000);
     wait_key();
+}
+
+uint8_t check( uint8_t speedcheck, uint8_t slip_flag, uint8_t level_l, uint8_t level_r )
+{
+    static uint8_t level_fail;
+
+    if( planter_raw==0xFFFF && packer_raw!=0xFF ) return ERR_PLANTER_STOP;
+	if( packer_raw==0xFF && planter_raw!=0xFFFF ) return ERR_PACKER_STOP;
+
+    if(speedcheck)
+    {
+        uint16_t planter_v = PLANTER_V/planter_raw;
+        uint16_t packer_v = PACKER_V/packer_raw;
+
+        if( packer_v > SLIP_RATIO*planter_v ) return ERR_PLANTER_SLIP;
+        if( planter_v > SLIP_RATIO*packer_v ) return ERR_PACKER_SLIP;
+    }
+
+    if( level_r<LEVEL_SAFETY_LOW && ( !(level_fail&R_FAIL) ) )
+    {
+        level_fail |= R_FAIL;
+        return ERR_LOW_LEVEL_R;
+    }
+
+    if( level_l<LEVEL_SAFETY_LOW && ( !(level_fail&L_FAIL) ) )
+    {
+        level_fail |= L_FAIL;
+        return ERR_LOW_LEVEL_L;
+    }
+
+    if(level_r>=LEVEL_SAFETY_RESET) level_fail &= (~R_FAIL);
+    if(level_l>=LEVEL_SAFETY_RESET) level_fail &= (~L_FAIL);
+
+    return 0;
+}
+
+
+void throw_error( uint8_t errno )
+{
+    lcd_clear();
+
+    switch( errno&0xF0 )
+    {
+        case ERR_STOP:
+        {
+        	BUZ_ON;
+        	lcd_mvputs( 0, 0, T_ERR);
+            lcd_mvputs( 0, 1, T_LOW);
+            lcd_mvputs( 0, 2, errno&0x0F ? T_PACKER_STOP : T_PLANT_STOP);
+            break;
+        }
+
+        case ERR_LOW_LEVEL:
+		{
+			beep();
+			lcd_mvputs( 0, 0, T_WARN);
+			lcd_mvputs( 0, 1, T_LOW);
+			lcd_mvputs( 0, 2, errno&0x02 ? T_R : T_L);
+			break;
+		}
+
+        case ERR_SLIP:
+		{
+			beep();
+			lcd_mvputs( 0, 0, T_WARN);
+			lcd_mvputs( 0, 1, errno&0x0F ? T_PLANT_SLIP : T_PACKER_SLIP);
+			break;
+		}
+        default: BUZ_OFF; break;
+    }
+}
+
+ISR(TIMER0_OVF_vect) //packer stop
+{
+    packer_raw=0xFF;
+}
+
+ISR(INT0_vect) //packer impulse
+{
+    packer_raw=TCNT0;
+    TCNT0=0;
+    ++packer_cnt;
+}
+
+ISR(TIMER1_OVF_vect) //planter stop
+{
+    planter_raw=0xFFFF;
+}
+
+ISR(TIMER1_CAPT_vect) //planter impulse
+{
+    planter_raw=ICR1;
+    TCNT1=0;
+    ++planter_cnt;
 }

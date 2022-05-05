@@ -58,13 +58,13 @@
 #define ACAL_LIMIT_HL 200
 #define ACAL_LIMIT_HH 240
 
-extern uint8_t check_warn(uint8_t level_l, uint8_t level_r, uint8_t speedcheck);
-extern uint8_t check_stop();
-extern void throw_warn(uint8_t warnno, uint8_t speedcheck);
-extern void throw_error(uint8_t errno);
+#define SLIP_RATIO 2
+#define LEVEL_SAFETY_RESET 15
+#define LEVEL_SAFETY_LOW 3
 
+uint8_t check( uint8_t speedcheck, uint8_t slip_flag, uint8_t level_l, uint8_t level_r );
+void throw_error(uint8_t errno);
 
-void beep();
 void print_data(uint16_t area, uint16_t speed);
 void set_back_text();
 void welcome_screen();
