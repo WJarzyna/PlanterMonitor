@@ -91,7 +91,7 @@ void run_planter( uint8_t speedcheck )
 
 	while(1)
 	{
-		if( !back_set )
+		if( !back_set && !errno )
 		{
 			lcd_clear();
 			set_back_text();
