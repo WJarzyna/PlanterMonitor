@@ -3,8 +3,8 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
-#define BUZ_ON TCCR2B=(1<<CS20)
-#define BUZ_OFF TCCR2B=0; PORTD&=~(1<<7)
+#define BUZ_ON OCR2A = 127;
+#define BUZ_OFF OCR2A = 0; PORTD &= ~(1<<7)
 
 #define K_UP 0x10
 #define K_DN 0x80
@@ -21,6 +21,9 @@
 #define K_9 0xB0
 #define K_0 0xD0
 
+#define TOIE 0
+
 void beep();
 uint8_t wait_key();
 void init_kp_buz();
+uint8_t check_delay( uint8_t time_sec );

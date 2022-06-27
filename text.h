@@ -33,6 +33,7 @@
 #define T_PLANT_STOP "Zatrzymany siewnik!"
 #define T_PACKER_SLIP "Poslizg walu"
 #define T_PLANT_SLIP "Poslizg siewnika"
+#define T_UNKNOWN_ERR "Nieznany blad"
 
 #define T_R "Strona prawa"
 #define T_L "Strona lewa"
@@ -53,6 +54,7 @@
 
 #define T_CAL_F2 "Zapisane wartosci:"
 #define T_CAL_F3 "lewa           prawa"
+#define T_NO_CAL "Brak kalibracji"
 
 #define T_PCAL "Proba na 1 ar"
 #define T_PCAL_FIN "Proba zakonczona"
